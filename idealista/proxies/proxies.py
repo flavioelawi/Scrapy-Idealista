@@ -1,5 +1,4 @@
 import requests
-import requests_html
 from lxml.html import fromstring
 
 

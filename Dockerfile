@@ -1,25 +1,35 @@
-FROM python:3.8-slim
+FROM python:3.11-buster as builder
+
+RUN  pip install poetry
+
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=1 \
+    POETRY_VIRTUALENVS_CREATE=1 \
+    POETRY_CACHE_DIR=/tmp/poetry_cache
+
+WORKDIR /app
+
+COPY pyproject.toml poetry.lock ./
+
+RUN --mount=type=cache,target=$POETRY_CACHE_DIR poetry install --no-root
+
+FROM python:3.11-slim-buster as runtime
+
+ENV VIRTUAL_ENV=/app/.venv \
+    PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH="/app/"
+
+COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
+
+COPY . /app/.
+
+VOLUME [ "/data" ]
 
 # LABELS
 LABEL maintainer="Iván Alejandro Marugán <hello@ialejandro.rocks>" \
       version="1.0"
 
-# ENV
-COPY idealista /app/idealista
-COPY scrapy.cfg /app
-COPY requirements.txt /app
-COPY entrypoint.sh /app
-
-# APP DIR
 WORKDIR /app
-
-# INSTALL REQUIREMENTS
-RUN apt update                                              && \
-    apt install -y build-essential --no-install-recommends  && \
-    pip install -r requirements.txt
-
-# VOLUMES
-VOLUME [ "/data" ]
 
 # ENTRYPOINT
 ENTRYPOINT [ "bash", "entrypoint.sh" ]
